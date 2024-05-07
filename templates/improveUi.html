@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TEAM 4</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #f9f9fa;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        color: #333;
+      }
+      h1 {
+        color: #5a5a5a;
+      }
+      button {
+        padding: 12px 25px;
+        font-size: 16px;
+        cursor: pointer;
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        margin: 12px;
+        box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+        transition: transform 0.2s ease-in-out;
+      }
+      button:hover {
+        transform: scale(1.05);
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      #audio-preview {
+        width: 100%;
+        max-width: 400px;
+        margin-top: 20px;
+      }
+      #result,
+      #loading {
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #dff0d8;
+        color: #3c763d;
+        border: 1px solid #d6e9c6;
+        border-radius: 5px;
+        display: none;
+        width: 300px;
+        text-align: center;
+        transition: opacity 0.3s ease;
+      }
+      #loading {
+        background-color: #d9edf7;
+        color: #31708f;
+        border-color: #bce8f1;
+      }
+      .tooltip {
+        position: relative;
+        display: inline-block;
+      }
+      .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 140px;
+        background-color: #555;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px 0;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -70px;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+      }
+      .visualizer {
+        width: 100%;
+        max-width: 800px;
+        height: 100px;
+        background: #ddd;
+        border-radius: 8px;
+        margin-top: 20px;
+        position: relative;
+        overflow: hidden;
+        display: none; /* Initially hidden */
+        background-image: linear-gradient(
+          to left,
+          rgba(255, 255, 255, 0),
+          rgba(0, 123, 255, 0.75),
+          rgba(255, 255, 255, 0)
+        );
+        background-size: 200% 100%;
+      }
+      @keyframes scan {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -100% 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Design of an Anomaly Detection for an Engine Fault Diagnosis System</h1>
+    <div class="tooltip">
+      <button id="start-recording">Start Recording</button>
+      <span class="tooltiptext">Click to start recording</span>
+    </div>
+    <div class="tooltip">
+      <button id="stop-recording" disabled>Stop Recording</button>
+      <span class="tooltiptext">Click to stop recording</span>
+    </div>
+    <div class="tooltip">
+      <button id="submit-audio" disabled>Submit</button>
+      <span class="tooltiptext">Submit your recording</span>
+    </div>
+
+    <audio id="audio-preview" controls></audio>
+    <div class="visualizer"></div>
+    <div id="result"></div>
+    <div id="loading">Uploading...</div>
+
+    <form id="audio-form" enctype="multipart/form-data" style="display: none">
+      <input type="file" id="audio-data" name="audio_data" accept="audio/*" />
+    </form>
+
+    <script>
+      let chunks = [];
+      let stream;
+      let recorder;
+      const visualizer = document.querySelector(".visualizer");
+
+      function startRecording() {
+        navigator.mediaDevices
+          .getUserMedia({ audio: true })
+          .then(function (streamObj) {
+            stream = streamObj;
+            recorder = new MediaRecorder(stream);
+            recorder.ondataavailable = function (e) {
+              chunks.push(e.data);
+            };
+            recorder.onstop = function () {
+              const blob = new Blob(chunks, { type: "audio/ogg; codecs=opus" });
+              const audioURL = URL.createObjectURL(blob);
+              document.getElementById("audio-preview").src = audioURL;
+
+              const file = new File([blob], "recording.ogg", {
+                type: "audio/ogg",
+              });
+              const dataTransfer = new DataTransfer();
+              dataTransfer.items.add(file);
+              document.getElementById("audio-data").files = dataTransfer.files;
+
+              document
+                .getElementById("submit-audio")
+                .removeAttribute("disabled");
+              chunks = [];
+            };
+            recorder.start();
+            document
+              .getElementById("start-recording")
+              .setAttribute("disabled", true);
+            document
+              .getElementById("stop-recording")
+              .removeAttribute("disabled");
+            visualizer.style.display = "block"; // Show visualizer
+            visualizer.style.animation = "scan 5s infinite linear"; // Start scanning animation
+          })
+          .catch(function (err) {
+            console.log("The following error occurred: " + err);
+          });
+      }
+
+      function stopRecording() {
+        recorder.stop();
+        stream.getTracks().forEach((track) => track.stop());
+        document
+          .getElementById("stop-recording")
+          .setAttribute("disabled", true);
+        document.getElementById("start-recording").removeAttribute("disabled");
+        visualizer.style.display = "none"; // Hide visualizer
+        visualizer.style.animation = "none"; // Stop scanning animation
+      }
+
+      document
+        .getElementById("start-recording")
+        .addEventListener("click", startRecording);
+      document
+        .getElementById("stop-recording")
+        .addEventListener("click", stopRecording);
+
+      document
+        .getElementById("submit-audio")
+        .addEventListener("click", function (event) {
+          event.preventDefault();
+
+          document.getElementById("loading").style.display = "block"; // Show loading indicator
+
+          let formData = new FormData();
+          formData.append(
+            "audio_data",
+            document.getElementById("audio-data").files[0]
+          );
+
+          fetch("/process_audio", {
+            method: "POST",
+            body: formData,
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              document.getElementById("loading").style.display = "none"; // Hide loading indicator
+              document.getElementById("result").innerText = data.result;
+              document.getElementById("result").style.display = "block"; // Show the results
+            });
+        });
+    </script>
+  </body>
+</html>
