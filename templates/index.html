@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Record Audio</title>
-</head>
-<body>
+  </head>
+  <body>
     <h1>Record Audio</h1>
     <button id="start-recording">Start Recording</button>
     <button id="stop-recording" disabled>Stop Recording</button>
@@ -15,72 +15,91 @@
 
     <div id="result"></div>
 
-    <form id="audio-form" enctype="multipart/form-data" style="display: none;">
-        <input type="file" id="audio-data" name="audio_data" accept="audio/*">
+    <form id="audio-form" enctype="multipart/form-data" style="display: none">
+      <input type="file" id="audio-data" name="audio_data" accept="audio/*" />
     </form>
 
     <script>
-        let chunks = [];
-        let stream;
-        let recorder;
-    
-        function startRecording() {
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(function(streamObj) {
-                    stream = streamObj;
-                    recorder = new MediaRecorder(stream);
-                    recorder.ondataavailable = function(e) {
-                        chunks.push(e.data);
-                    };
-                    recorder.onstop = function() {
-                        const blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
-                        const audioURL = URL.createObjectURL(blob);
-                        document.getElementById('audio-preview').src = audioURL;
-                        
-                        // Ensure the file input is properly updated
-                        const file = new File([blob], "recording.ogg", { type: 'audio/ogg' });
-                        const dataTransfer = new DataTransfer();
-                        dataTransfer.items.add(file);
-                        document.getElementById('audio-data').files = dataTransfer.files;
-    
-                        document.getElementById('submit-audio').removeAttribute('disabled');
-                        chunks = [];
-                    };
-                    recorder.start();
-                    document.getElementById('start-recording').setAttribute('disabled', true);
-                    document.getElementById('stop-recording').removeAttribute('disabled');
-                })
-                .catch(function(err) {
-                    console.log('The following error occurred: ' + err);
-                });
-        }
-    
-        function stopRecording() {
-            recorder.stop();
-            stream.getTracks().forEach(track => track.stop());
-            document.getElementById('stop-recording').setAttribute('disabled', true);
-            document.getElementById('start-recording').removeAttribute('disabled');
-        }
-    
-        document.getElementById('start-recording').addEventListener('click', startRecording);
-        document.getElementById('stop-recording').addEventListener('click', stopRecording);
-    
-        document.getElementById('submit-audio').addEventListener('click', function(event) {
-            event.preventDefault();
-    
-            let formData = new FormData();
-            formData.append('audio_data', document.getElementById('audio-data').files[0]);
-    
-            fetch('/process_audio', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('result').innerText = data.result;
+      let chunks = [];
+      let stream;
+      let recorder;
+
+      function startRecording() {
+        navigator.mediaDevices
+          .getUserMedia({ audio: true })
+          .then(function (streamObj) {
+            stream = streamObj;
+            recorder = new MediaRecorder(stream);
+            recorder.ondataavailable = function (e) {
+              chunks.push(e.data);
+            };
+            recorder.onstop = function () {
+              const blob = new Blob(chunks, { type: "audio/ogg; codecs=opus" });
+              const audioURL = URL.createObjectURL(blob);
+              document.getElementById("audio-preview").src = audioURL;
+
+              // Ensure the file input is properly updated
+              const file = new File([blob], "recording.ogg", {
+                type: "audio/ogg",
+              });
+              const dataTransfer = new DataTransfer();
+              dataTransfer.items.add(file);
+              document.getElementById("audio-data").files = dataTransfer.files;
+
+              document
+                .getElementById("submit-audio")
+                .removeAttribute("disabled");
+              chunks = [];
+            };
+            recorder.start();
+            document
+              .getElementById("start-recording")
+              .setAttribute("disabled", true);
+            document
+              .getElementById("stop-recording")
+              .removeAttribute("disabled");
+          })
+          .catch(function (err) {
+            console.log("The following error occurred: " + err);
+          });
+      }
+
+      function stopRecording() {
+        recorder.stop();
+        stream.getTracks().forEach((track) => track.stop());
+        document
+          .getElementById("stop-recording")
+          .setAttribute("disabled", true);
+        document.getElementById("start-recording").removeAttribute("disabled");
+      }
+
+      document
+        .getElementById("start-recording")
+        .addEventListener("click", startRecording);
+      document
+        .getElementById("stop-recording")
+        .addEventListener("click", stopRecording);
+
+      document
+        .getElementById("submit-audio")
+        .addEventListener("click", function (event) {
+          event.preventDefault();
+
+          let formData = new FormData();
+          formData.append(
+            "audio_data",
+            document.getElementById("audio-data").files[0]
+          );
+
+          fetch("/process_audio", {
+            method: "POST",
+            body: formData,
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              document.getElementById("result").innerText = data.result;
             });
         });
     </script>
-    
-</body>
+  </body>
 </html>
